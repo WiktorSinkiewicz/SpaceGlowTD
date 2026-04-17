@@ -1,7 +1,7 @@
 #include "Camera.h"
 
 Camera::Camera(glm::vec3 position) 
-    : MovementSpeed(SPEED), Zoom(ZOOM), Yaw(YAW), Pitch(PITCH), WorldUp(glm::vec3(0.0f, 1.0f, 0.0f))
+    : WorldUp(glm::vec3(0.0f, 1.0f, 0.0f)), Yaw(YAW), Pitch(PITCH), MovementSpeed(SPEED), Zoom(ZOOM)
 {
     Position = position;
     updateCameraVectors();

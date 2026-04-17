@@ -60,49 +60,50 @@ int main()
 
     Shader basicShader("shaders/basic.vert", "shaders/basic.frag");
 
+    // Pozycja (XYZ) + Normalna (XYZ) = 6 floatów na wierzchołek, 36 wierzchołków = 216 floatów
     float vertices[] = {
-        // Tylna sciana (Culling wymaga kolejności wierzchołków przeciwnej do wskazówek zegara - CCW)
-        -0.5f, -0.5f, -0.5f, 
-         0.5f,  0.5f, -0.5f, 
-         0.5f, -0.5f, -0.5f, 
-         0.5f,  0.5f, -0.5f, 
-        -0.5f, -0.5f, -0.5f, 
-        -0.5f,  0.5f, -0.5f, 
-        // Przednia sciana
-        -0.5f, -0.5f,  0.5f, 
-         0.5f, -0.5f,  0.5f, 
-         0.5f,  0.5f,  0.5f, 
-         0.5f,  0.5f,  0.5f, 
-        -0.5f,  0.5f,  0.5f, 
-        -0.5f, -0.5f,  0.5f, 
-        // Lewa 
-        -0.5f,  0.5f,  0.5f, 
-        -0.5f,  0.5f, -0.5f, 
-        -0.5f, -0.5f, -0.5f, 
-        -0.5f, -0.5f, -0.5f, 
-        -0.5f, -0.5f,  0.5f, 
-        -0.5f,  0.5f,  0.5f, 
-        // Prawa
-         0.5f,  0.5f,  0.5f, 
-         0.5f, -0.5f, -0.5f, 
-         0.5f,  0.5f, -0.5f, 
-         0.5f, -0.5f, -0.5f, 
-         0.5f,  0.5f,  0.5f, 
-         0.5f, -0.5f,  0.5f, 
-        // Dolna
-        -0.5f, -0.5f, -0.5f, 
-         0.5f, -0.5f, -0.5f, 
-         0.5f, -0.5f,  0.5f, 
-         0.5f, -0.5f,  0.5f, 
-        -0.5f, -0.5f,  0.5f, 
-        -0.5f, -0.5f, -0.5f, 
-        // Gorna
-        -0.5f,  0.5f, -0.5f, 
-         0.5f,  0.5f,  0.5f, 
-         0.5f,  0.5f, -0.5f, 
-         0.5f,  0.5f,  0.5f, 
-        -0.5f,  0.5f, -0.5f, 
-        -0.5f,  0.5f,  0.5f
+        // Tylna sciana - normalna (0, 0, -1)
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+        // Przednia sciana - normalna (0, 0, 1)
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+         0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+        // Lewa sciana - normalna (-1, 0, 0)
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+        // Prawa sciana - normalna (1, 0, 0)
+         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+        // Dolna sciana - normalna (0, -1, 0)
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+        // Gorna sciana - normalna (0, 1, 0)
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f
     };
 
     unsigned int VBO, VAO;
@@ -113,8 +114,12 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    // Atrybut 0: Pozycja (3 floaty, stride 6 = przeskok do następnego wierzchołka)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    // Atrybut 1: Normalna (3 floaty, offset 3 = za pozycją)
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
 
     // KROK 2 - Generowanie struktury gry
     Map levelMap(20, 20);
@@ -150,7 +155,7 @@ int main()
         }
 
         // Płynna Fizyka i Logika Trasy (UFO)
-        for (int i = 0; i < enemies.size(); i++) {
+        for (size_t i = 0; i < enemies.size(); i++) {
             Enemy& e = enemies[i];
             e.progress += enemySpeed * deltaTime;
             
@@ -160,7 +165,7 @@ int main()
             }
             
             // Check Base collision
-            if (e.pathIndex >= levelMap.path.size() - 1) {
+            if (e.pathIndex >= (int)levelMap.path.size() - 1) {
                 enemies.erase(enemies.begin() + i);
                 i--;
                 continue; // Usunięto ufo, powrót do kolejnego na liście
@@ -184,6 +189,16 @@ int main()
         basicShader.setMat4("projection", projection);
         glm::mat4 view = camera.GetViewMatrix();
         basicShader.setMat4("view", view);
+
+        // Oświetlenie: pozycja kamery do obliczeń refleksji lustrzanej
+        basicShader.setVec3("viewPos", camera.Position);
+
+        // Światło kierunkowe (kosmiczne słońce) - pada z góry-prawej pod kątem
+        basicShader.setVec3("dirLight.direction", glm::vec3(-0.3f, -1.0f, -0.4f));
+        basicShader.setVec3("dirLight.color", glm::vec3(0.85f, 0.85f, 0.95f));
+
+        // Na razie 0 świateł punktowych - pociski będą je dodawać dynamicznie w runtime
+        basicShader.setInt("numPointLights", 0);
 
         glBindVertexArray(VAO);
         
@@ -255,7 +270,7 @@ void processInput(GLFWwindow *window)
 }
 
 // Zmiana rozmiaru okienka
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+void framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 {
     glViewport(0, 0, width, height);
 }

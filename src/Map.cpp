@@ -41,8 +41,8 @@ bool Map::findAlternativePath(int i, int j, const std::vector<glm::ivec2>& path,
     glm::ivec2 startNode = path[i];
     glm::ivec2 endNode = path[j];
 
-    for(int k = 0; k < path.size(); k++) {
-        if (k <= i || k >= j) staticPath[path[k].x][path[k].y] = true;
+    for(size_t k = 0; k < path.size(); k++) {
+        if (k <= (size_t)i || k >= (size_t)j) staticPath[path[k].x][path[k].y] = true;
         else forbidden[path[k].x][path[k].y] = true;
     }
 
@@ -93,6 +93,8 @@ bool Map::findAlternativePath(int i, int j, const std::vector<glm::ivec2>& path,
             bool touchesStatic = false;
             for(auto& d2 : dirs) {
                 glm::ivec2 nnx = nx + d2;
+                // Granice sąsiada muszą być sprawdzone by nie wyjść poza tablicę
+                if (nnx.x < 0 || nnx.x >= width || nnx.y < 0 || nnx.y >= height) continue;
                 if (staticPath[nnx.x][nnx.y]) {
                     if (nnx != startNode && nnx != endNode) {
                         touchesStatic = true;
@@ -143,11 +145,11 @@ void Map::generateWindingPath(int minLen, int maxLen) {
     }
 
     int iters = 0;
-    while(path.size() < maxLen && iters < 3000) {
+    while((int)path.size() < maxLen && iters < 3000) {
         iters++;
         
         // Prawdopodobieństwo 5% na akceptacje dobrego wyniku z góry i zatrzymania procesu po wejściu we widełki by nie ciągnąć w nieskończoność do oporu
-        if (path.size() >= minLen) {
+        if ((int)path.size() >= minLen) {
             std::uniform_int_distribution<> chance(0, 100);
             if (chance(gen) < 8) break;
         }
@@ -163,7 +165,7 @@ void Map::generateWindingPath(int minLen, int maxLen) {
         std::vector<glm::ivec2> segment;
         // Transformacja lokalna Mutacji. Szuka ominięcia starych klocków by poszukać dłuższej, nowej, legalnej drogi - bez 180-turn i auto-styczności
         if (findAlternativePath(i, j, path, segment)) {
-            if (segment.size() > (j - i + 1)) {
+            if ((int)segment.size() > (j - i + 1)) {
                 path.erase(path.begin() + i + 1, path.begin() + j);
                 path.insert(path.begin() + i + 1, segment.begin() + 1, segment.end() - 1);
             }
