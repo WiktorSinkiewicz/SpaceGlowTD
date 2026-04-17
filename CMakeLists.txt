@@ -26,6 +26,25 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glm)
 
+# 3. Pobieranie Dear ImGui (UI do HUD, menu itp.)
+FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG        v1.90.4
+)
+FetchContent_MakeAvailable(imgui)
+
+# Pliki źródłowe Dear ImGui (brak natywnego CMakeLists.txt - ręczna lista)
+set(IMGUI_DIR ${imgui_SOURCE_DIR})
+set(IMGUI_SOURCES
+    ${IMGUI_DIR}/imgui.cpp
+    ${IMGUI_DIR}/imgui_draw.cpp
+    ${IMGUI_DIR}/imgui_tables.cpp
+    ${IMGUI_DIR}/imgui_widgets.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
+)
+
 # Ustawienie prekompilowanych plików GLAD (znajdują się w folderze /extern/glad)
 set(GLAD_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/extern/glad/include")
 set(GLAD_SOURCES "${CMAKE_SOURCE_DIR}/extern/glad/src/glad.c")
@@ -37,6 +56,7 @@ set(SRCS
     src/Camera.cpp
     src/Map.cpp
     ${GLAD_SOURCES}
+    ${IMGUI_SOURCES}
 )
 
 # Aplikacja końcowa wykonywalna
@@ -46,6 +66,8 @@ add_executable(${PROJECT_NAME} ${SRCS})
 target_include_directories(${PROJECT_NAME} PUBLIC
     ${CMAKE_SOURCE_DIR}/src
     ${GLAD_INCLUDE_DIRS}
+    ${IMGUI_DIR}
+    ${IMGUI_DIR}/backends
 )
 
 # Podlinkowanie bibliotek bazowych (działanie między systemowe Linux/Windows)

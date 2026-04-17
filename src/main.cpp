@@ -3,6 +3,10 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 #include <iostream>
 
 #include "Shader.h"
@@ -27,6 +31,12 @@ Camera camera(glm::vec3(10.0f, 15.0f, 22.0f));
 
 float deltaTime = 0.0f; 
 float lastFrame = 0.0f; 
+
+// Stan gry
+int playerHP = 10;
+int materials = 100;
+int score = 0;
+bool gameOver = false;
 
 int main()
 {
@@ -57,6 +67,14 @@ int main()
     // Odpalenie culling (nie renderuj ścian z tyłu kostki względem kamery, da nam to FPS w 400 klockach bez problemu)
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
+
+    // Inicjalizacja Dear ImGui
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
 
     Shader basicShader("shaders/basic.vert", "shaders/basic.frag");
 
@@ -141,6 +159,9 @@ int main()
 
         processInput(window);
 
+        // Logika gry zatrzymuje się po Game Over
+        if (!gameOver) {
+
         // System Spawnowania
         spawnTimer += deltaTime;
         if (spawnTimer >= spawnRate) {
@@ -168,7 +189,15 @@ int main()
             if (e.pathIndex >= (int)levelMap.path.size() - 1) {
                 enemies.erase(enemies.begin() + i);
                 i--;
-                continue; // Usunięto ufo, powrót do kolejnego na liście
+
+                // Wróg dotarł do bazy - utrata HP
+                playerHP--;
+                if (playerHP <= 0) {
+                    playerHP = 0;
+                    gameOver = true;
+                }
+
+                continue;
             }
             
             // Liniowa Interpolacja Mix w przestrzeni kafelków 3D 
@@ -179,6 +208,8 @@ int main()
             // Y w grze rygujemy na płaskie 0.6f by najeżdżały na kostki
             e.currentPos = glm::vec3(current2D.x, 0.6f, current2D.y);
         }
+
+        } // koniec if (!gameOver)
 
         glClearColor(0.02f, 0.05f, 0.10f, 1.0f); // Bardzo mroczne, głębokie kosmiczne tło
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -244,9 +275,69 @@ int main()
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
 
+        // ========================
+        // Dear ImGui - Renderowanie interfejsu
+        // ========================
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        // Górny pasek HUD (HP, Materiały, Wynik)
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::SetNextWindowSize(ImVec2((float)SCR_WIDTH, 40));
+        ImGui::Begin("HUD", nullptr,
+            ImGuiWindowFlags_NoTitleBar |
+            ImGuiWindowFlags_NoResize |
+            ImGuiWindowFlags_NoMove |
+            ImGuiWindowFlags_NoScrollbar |
+            ImGuiWindowFlags_NoCollapse |
+            ImGuiWindowFlags_NoBackground);
+
+        // HP - czerwony gdy niskie, zielony gdy pełne
+        float hpRatio = (float)playerHP / 10.0f;
+        ImVec4 hpColor = ImVec4(1.0f - hpRatio, hpRatio, 0.2f, 1.0f);
+        ImGui::TextColored(hpColor, "HP: %d", playerHP);
+
+        ImGui::SameLine(200);
+        ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.2f, 1.0f), "Materials: %d", materials);
+
+        ImGui::SameLine(450);
+        ImGui::TextColored(ImVec4(0.3f, 0.9f, 1.0f, 1.0f), "Score: %d", score);
+
+        ImGui::End();
+
+        // Ekran Game Over
+        if (gameOver) {
+            ImVec2 center((float)SCR_WIDTH * 0.5f, (float)SCR_HEIGHT * 0.5f);
+            ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+            ImGui::Begin("GameOver", nullptr,
+                ImGuiWindowFlags_NoTitleBar |
+                ImGuiWindowFlags_NoResize |
+                ImGuiWindowFlags_NoMove |
+                ImGuiWindowFlags_AlwaysAutoResize |
+                ImGuiWindowFlags_NoCollapse);
+
+            ImGui::Dummy(ImVec2(0, 10));
+            ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "   GAME OVER   ");
+            ImGui::Separator();
+            ImGui::Dummy(ImVec2(0, 5));
+            ImGui::Text("Final Score: %d", score);
+            ImGui::Dummy(ImVec2(0, 10));
+
+            ImGui::End();
+        }
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+
+    // Sprzątanie Dear ImGui
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
