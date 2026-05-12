@@ -78,6 +78,8 @@ vec3 calcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
     return (diffuse + specular) * attenuation;
 }
 
+uniform float objectAlpha = 1.0;
+
 void main()
 {
     vec3 norm = normalize(Normal);
@@ -91,5 +93,5 @@ void main()
         result += calcPointLight(pointLights[i], norm, FragPos, viewDir) * objectColor;
     }
 
-    FragColor = vec4(result, 1.0);
+    FragColor = vec4(result, objectAlpha);
 }

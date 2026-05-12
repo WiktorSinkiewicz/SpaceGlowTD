@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 project(SpaceGlowTD)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -79,3 +80,4 @@ endif()
 
 # Skopiowanie shaderów do folderu build, by program uruchamiany bezpośrednio tam widział pliki
 file(COPY ${CMAKE_SOURCE_DIR}/shaders DESTINATION ${CMAKE_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/shaders DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

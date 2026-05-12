@@ -14,3 +14,6 @@ Makefile
 *.suo
 *.user
 .DS_Store
+.vs/
+imgui.ini
+*.sdf

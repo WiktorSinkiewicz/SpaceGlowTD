@@ -15,6 +15,7 @@ struct Tile {
     int z;
     float height;
     TileType type;
+    bool hasTower = false;
 };
 
 class Map {
