@@ -27,6 +27,22 @@ void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime) {
         Position -= rightDir * velocity;
     if (direction == RIGHT)
         Position += rightDir * velocity;
+    if (direction == ZOOM_IN)
+        Position += Front * velocity * 2.0f;
+    if (direction == ZOOM_OUT)
+        Position -= Front * velocity * 2.0f;
+        
+    // Ograniczenia wysokości kamery dla zoomu
+    if (Position.y < 2.0f) Position.y = 2.0f;
+    if (Position.y > 45.0f) Position.y = 45.0f;
+}
+
+void Camera::ProcessMouseScroll(float yoffset) {
+    Position += Front * yoffset * 2.0f;
+    
+    // Ograniczenia wysokości kamery
+    if (Position.y < 2.0f) Position.y = 2.0f;
+    if (Position.y > 45.0f) Position.y = 45.0f;
 }
 
 void Camera::updateCameraVectors() {

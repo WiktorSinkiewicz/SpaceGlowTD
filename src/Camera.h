@@ -9,7 +9,9 @@ enum Camera_Movement {
     FORWARD,
     BACKWARD,
     LEFT,
-    RIGHT
+    RIGHT,
+    ZOOM_IN,
+    ZOOM_OUT
 };
 
 // Stałe RTS dla widoku statycznego
@@ -35,6 +37,7 @@ public:
 
     glm::mat4 GetViewMatrix() const;
     void ProcessKeyboard(Camera_Movement direction, float deltaTime);
+    void ProcessMouseScroll(float yoffset);
 
 private:
     void updateCameraVectors();
