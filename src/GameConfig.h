@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>
 
-// --- Game Configuration ---
+
 struct GameConfig {
   int initialPlayerHP = 10;
   int initialMaterials = 100;
@@ -25,7 +25,7 @@ struct GameConfig {
 
   float towerBasicDamage = 5.0f;
   float towerBasicRange = 4.0f;
-  float heightRangeMultiplier = 0.15f; // +15% zasięgu za każdy blok wysokości
+  float heightRangeMultiplier = 0.15f; // +15% range per height level
   float towerBasicCooldown = 1.0f;
   float projectileSpeed = 8.0f;
 

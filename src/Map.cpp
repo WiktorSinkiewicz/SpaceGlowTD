@@ -1,5 +1,4 @@
 #include "Map.h"
-#include <iostream>
 #include <random>
 #include <algorithm>
 #include <queue>
@@ -28,7 +27,6 @@ void Map::generateTerrain() {
         for (int z = 0; z < height; ++z) {
             float n = noise.GetNoise((float)x, (float)z);
             n = (n + 1.0f) * 0.5f; 
-            // Zbalansowana optymalna wysokość gór dla lepszej estetyki kanionów w TD (Zmniejszono z 6.0 na 2.5)
             grid[x][z].height = n * 2.5f; 
         }
     }
@@ -67,7 +65,7 @@ bool Map::findAlternativePath(int i, int j, const std::vector<glm::ivec2>& path,
             break;
         }
 
-        // Mieszanie dla nieskończonej unikalności
+        // Shuffle for variety
         std::shuffle(dirs.begin(), dirs.end(), gen);
 
         for(auto& d : dirs) {
@@ -79,21 +77,21 @@ bool Map::findAlternativePath(int i, int j, const std::vector<glm::ivec2>& path,
             if (parent[nx.x][nx.y].x != -1) continue;
             if (forbidden[nx.x][nx.y]) continue;
 
-            // Zezwól na połączenie z celem
+            // Allow connecting to target
             if (nx == endNode) {
                 parent[nx.x][nx.y] = curr;
                 q.push(nx);
                 continue;
             }
 
-            // Jeśli to stary mur patha i to nie cel - odrzucamy
+            // Skip static path nodes (except target)
             if (staticPath[nx.x][nx.y]) continue;
 
-            // Anty-kolizyjność: Płytek nie może dotykać żadnych elementów statycznej ścieżki za wyjątkiem Startu i Końca do podłączenia
+            // Prevent adjacency to existing path (except start/end)
             bool touchesStatic = false;
             for(auto& d2 : dirs) {
                 glm::ivec2 nnx = nx + d2;
-                // Granice sąsiada muszą być sprawdzone by nie wyjść poza tablicę
+                // Bounds check
                 if (nnx.x < 0 || nnx.x >= width || nnx.y < 0 || nnx.y >= height) continue;
                 if (staticPath[nnx.x][nnx.y]) {
                     if (nnx != startNode && nnx != endNode) {
@@ -137,7 +135,7 @@ void Map::generateWindingPath(int minLen, int maxLen) {
     int cx = startX, cz = startZ;
     path.push_back({cx, cz});
     
-    // Klasyczna minimalna długa ścieżka bez zawijasów "L" (Krok 1)
+    // Build initial L-shaped path
     while(cx != endX || cz != endZ) {
         if (cx != endX) cx += (endX > cx) ? 1 : -1;
         else cz += (endZ > cz) ? 1 : -1;
@@ -148,7 +146,7 @@ void Map::generateWindingPath(int minLen, int maxLen) {
     while((int)path.size() < maxLen && iters < 3000) {
         iters++;
         
-        // Prawdopodobieństwo 5% na akceptacje dobrego wyniku z góry i zatrzymania procesu po wejściu we widełki by nie ciągnąć w nieskończoność do oporu
+        // Random early termination once minimum length reached
         if ((int)path.size() >= minLen) {
             std::uniform_int_distribution<> chance(0, 100);
             if (chance(gen) < 8) break;
@@ -157,13 +155,13 @@ void Map::generateWindingPath(int minLen, int maxLen) {
         std::uniform_int_distribution<> iDist(0, path.size() - 4);
         int i = iDist(gen);
         
-        // Maksymalny dystans odcięcia starej trasy + 14 kroków, by węzły miały mocne lokalne mutacje
+        // Local mutation: replace segment with longer alternative
         int endDist = std::min((int)path.size() - 1, i + 14);
         std::uniform_int_distribution<> jDist(i + 2, endDist);
         int j = jDist(gen);
 
         std::vector<glm::ivec2> segment;
-        // Transformacja lokalna Mutacji. Szuka ominięcia starych klocków by poszukać dłuższej, nowej, legalnej drogi - bez 180-turn i auto-styczności
+
         if (findAlternativePath(i, j, path, segment)) {
             if ((int)segment.size() > (j - i + 1)) {
                 path.erase(path.begin() + i + 1, path.begin() + j);
@@ -172,7 +170,7 @@ void Map::generateWindingPath(int minLen, int maxLen) {
         }
     }
 
-    // Adaptacja w strukturę gridu
+    // Apply path to grid
     for(auto& p : path) {
         grid[p.x][p.y].type = TILE_PATH;
         grid[p.x][p.y].height = 0.1f;

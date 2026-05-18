@@ -13,8 +13,7 @@ glm::mat4 Camera::GetViewMatrix() const {
 
 void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime) {
     float velocity = MovementSpeed * deltaTime;
-    // Blokujemy płaszczyznę logiki. Klawisze przesuwają kamerę wzdłuż X i Z.
-    // Aby lot góra/dół klawiszami W i S był wzdłuż podłogi Z, spłaszczamy wektor kierunku na Y = 0.
+    // Movement on XZ plane only
     
     glm::vec3 flatFront = glm::normalize(glm::vec3(Front.x, 0.0f, Front.z));
     glm::vec3 rightDir = glm::normalize(glm::vec3(Right.x, 0.0f, Right.z));
@@ -32,7 +31,7 @@ void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime) {
     if (direction == ZOOM_OUT)
         Position -= Front * velocity * 2.0f;
         
-    // Ograniczenia wysokości kamery dla zoomu
+    // Clamp height
     if (Position.y < 2.0f) Position.y = 2.0f;
     if (Position.y > 45.0f) Position.y = 45.0f;
 }
@@ -40,7 +39,7 @@ void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime) {
 void Camera::ProcessMouseScroll(float yoffset) {
     Position += Front * yoffset * 2.0f;
     
-    // Ograniczenia wysokości kamery
+    // Clamp height
     if (Position.y < 2.0f) Position.y = 2.0f;
     if (Position.y > 45.0f) Position.y = 45.0f;
 }
@@ -48,7 +47,7 @@ void Camera::ProcessMouseScroll(float yoffset) {
 void Camera::updateCameraVectors() {
     glm::vec3 front;
     front.x = cos(glm::radians(Yaw)) * cos(glm::radians(Pitch));
-    front.y = sin(glm::radians(Pitch)); // Y zawsze wymuszony by patrzeć w dół pod stałym PITCH
+    front.y = sin(glm::radians(Pitch));
     front.z = sin(glm::radians(Yaw)) * cos(glm::radians(Pitch));
     Front = glm::normalize(front);
     Right = glm::normalize(glm::cross(Front, WorldUp));

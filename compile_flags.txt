@@ -1,0 +1,8 @@
+-xc++
+-std=c++17
+-Isrc
+-Iextern/glad/include
+-Ibuild/_deps/glm-src
+-Ibuild/_deps/imgui-src
+-Ibuild/_deps/imgui-src/backends
+-Ibuild/_deps/glfw-src/include

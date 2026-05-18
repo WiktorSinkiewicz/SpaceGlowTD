@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 project(SpaceGlowTD)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -56,6 +57,8 @@ set(SRCS
     src/Shader.cpp
     src/Camera.cpp
     src/Map.cpp
+    src/Geometry.cpp
+    src/UI.cpp
     ${GLAD_SOURCES}
     ${IMGUI_SOURCES}
 )

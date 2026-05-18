@@ -6,7 +6,7 @@
 #include <iostream>
 
 Shader::Shader(const char* vertexPath, const char* fragmentPath) {
-    // 1. Wczytywanie ścieżek z plików
+    // Load shader source files
     std::string vertexCode;
     std::string fragmentCode;
     std::ifstream vShaderFile;
@@ -26,28 +26,28 @@ Shader::Shader(const char* vertexPath, const char* fragmentPath) {
         fragmentCode = fShaderStream.str();
     }
     catch (std::ifstream::failure& e) {
-        std::cerr << "BLAD::SHADER::PLIK_NIE_MOZE_ZASTAC_ODCZYTANY: " << e.what() << "\nCheck path: " << vertexPath << " and " << fragmentPath << std::endl;
+        std::cerr << "ERROR::SHADER::FILE_NOT_READ: " << e.what() << "\nCheck path: " << vertexPath << " and " << fragmentPath << std::endl;
     }
 
     const char* vShaderCode = vertexCode.c_str();
     const char * fShaderCode = fragmentCode.c_str();
 
-    // 2. Kompilacja
+    // Compile
     unsigned int vertex, fragment;
     
-    // Shader Wierzchołków
+
     vertex = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex, 1, &vShaderCode, NULL);
     glCompileShader(vertex);
     checkCompileErrors(vertex, "VERTEX");
     
-    // Shader Fragmentów (pikseli)
+
     fragment = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragment, 1, &fShaderCode, NULL);
     glCompileShader(fragment);
     checkCompileErrors(fragment, "FRAGMENT");
     
-    // Program Shadera
+
     ID = glCreateProgram();
     glAttachShader(ID, vertex);
     glAttachShader(ID, fragment);
@@ -93,13 +93,13 @@ void Shader::checkCompileErrors(unsigned int shader, std::string type) const {
         glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
         if (!success) {
             glGetShaderInfoLog(shader, 1024, NULL, infoLog);
-            std::cerr << "BLAD::KOMPILACJI_SHADERA_Z_TYPU: " << type << "\n" << infoLog << "\n -- --------------------------------------------------- -- " << std::endl;
+            std::cerr << "ERROR::SHADER_COMPILATION: " << type << "\n" << infoLog << std::endl;
         }
     } else {
         glGetProgramiv(shader, GL_LINK_STATUS, &success);
         if (!success) {
             glGetProgramInfoLog(shader, 1024, NULL, infoLog);
-            std::cerr << "BLAD::LINKOWANIA_PROGRAMU_Z_TYPU: " << type << "\n" << infoLog << "\n -- --------------------------------------------------- -- " << std::endl;
+            std::cerr << "ERROR::PROGRAM_LINKING: " << type << "\n" << infoLog << std::endl;
         }
     }
 }
