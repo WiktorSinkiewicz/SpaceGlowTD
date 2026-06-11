@@ -69,6 +69,7 @@ add_executable(${PROJECT_NAME} ${SRCS})
 # Podlinkowanie folderów z nagłówkami
 target_include_directories(${PROJECT_NAME} PUBLIC
     ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/extern
     ${GLAD_INCLUDE_DIRS}
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
@@ -81,6 +82,8 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(${PROJECT_NAME} PRIVATE m dl X11 pthread)
 endif()
 
-# Skopiowanie shaderów do folderu build, by program uruchamiany bezpośrednio tam widział pliki
+# Skopiowanie shaderów i tekstur do folderu build, by program uruchamiany bezpośrednio tam widział pliki
 file(COPY ${CMAKE_SOURCE_DIR}/shaders DESTINATION ${CMAKE_BINARY_DIR})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/shaders DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_SOURCE_DIR}/brick.jpg DESTINATION ${CMAKE_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/brick.jpg DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

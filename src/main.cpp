@@ -13,6 +13,9 @@
 #include <iostream>
 #include <vector>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "../extern/stb_image.h"
+
 #include "Camera.h"
 #include "Entities.h"
 #include "GameState.h"
@@ -55,8 +58,8 @@ int main() {
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-  GLFWwindow *window = glfwCreateWindow(
-      SCR_WIDTH, SCR_HEIGHT, "SpaceGlowTD - Voxel Terrain", NULL, NULL);
+  GLFWwindow *window =
+      glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "SpaceGlowTD", NULL, NULL);
   if (window == NULL) {
     std::cerr << "Failed to create GLFW window" << std::endl;
     glfwTerminate();
@@ -90,6 +93,31 @@ int main() {
 
   Shader basicShader("shaders/basic.vert", "shaders/basic.frag");
 
+  // Load brick texture from file using stb_image
+  GLuint brickTexture;
+  glGenTextures(1, &brickTexture);
+  glBindTexture(GL_TEXTURE_2D, brickTexture);
+  // Wrapping and filtering for tiled brick pattern
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  {
+    int texW, texH, texChannels;
+    stbi_set_flip_vertically_on_load(true);
+    unsigned char *data = stbi_load("brick.jpg", &texW, &texH, &texChannels, 0);
+    if (data) {
+      GLenum format = (texChannels == 4) ? GL_RGBA : GL_RGB;
+      glTexImage2D(GL_TEXTURE_2D, 0, format, texW, texH, 0, format, GL_UNSIGNED_BYTE, data);
+      glGenerateMipmap(GL_TEXTURE_2D);
+      std::cout << "Loaded brick.jpg (" << texW << "x" << texH << ")" << std::endl;
+    } else {
+      std::cerr << "Failed to load brick.jpg" << std::endl;
+    }
+    stbi_image_free(data);
+  }
+  glBindTexture(GL_TEXTURE_2D, 0);
+
   unsigned int VBO, VAO;
   glGenVertexArrays(1, &VAO);
   glGenBuffers(1, &VBO);
@@ -110,19 +138,22 @@ int main() {
   int sides[3] = {4, 3, 6};
   for (int i = 0; i < 3; i++) {
     std::vector<float> verts = generatePrismVertices(sides[i]);
-    towerVertexCount[i] = verts.size() / 6;
+    // 8 floats per vertex: pos(3) + normal(3) + uv(2)
+    towerVertexCount[i] = verts.size() / 8;
     glGenVertexArrays(1, &towerVAO[i]);
     glGenBuffers(1, &towerVBO[i]);
     glBindVertexArray(towerVAO[i]);
     glBindBuffer(GL_ARRAY_BUFFER, towerVBO[i]);
-    glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(float), verts.data(),
-                 GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
+    glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(float), verts.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
                           (void *)0);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
                           (void *)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
+                          (void *)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
   }
 
   GLuint rangeVAO, rangeVBO;
@@ -203,8 +234,7 @@ int main() {
           glm::vec3 boxMin(x * 1.0f - 0.475f, 0.0f, z * 1.0f - 0.475f);
           glm::vec3 boxMax(x * 1.0f + 0.475f, t.height, z * 1.0f + 0.475f);
           float tHit;
-          if (intersectRayAABB(camera.Position, rayWorld, boxMin, boxMax,
-                               tHit)) {
+          if (intersectRayAABB(camera.Position, rayWorld, boxMin, boxMax, tHit)) {
             if (tHit < closestT) {
               closestT = tHit;
               hoverX = x;
@@ -223,15 +253,11 @@ int main() {
         !gameOver && !ImGui::GetIO().WantCaptureMouse) {
       Tile &t = levelMap.grid[hoverX][hoverZ];
       if (selectedTowerBuild != -1 && t.type == TILE_EMPTY && !t.hasTower) {
-        int cost = (selectedTowerBuild == 0)
-                       ? cfg.towerBasicCost
-                       : ((selectedTowerBuild == 1) ? cfg.towerLaserCost
-                                                    : cfg.towerMortarCost);
+        int cost = (selectedTowerBuild == 0) ? cfg.towerBasicCost : ((selectedTowerBuild == 1) ? cfg.towerLaserCost : cfg.towerMortarCost);
         if (materials >= cost) {
           materials -= cost;
           t.hasTower = true;
-          placedTowers.push_back({hoverX, hoverZ, selectedTowerBuild, 0.0f, -1,
-                                  0.0f, glm::vec3(0.0f), false, 0});
+          placedTowers.push_back({hoverX, hoverZ, selectedTowerBuild, 0.0f, -1, 0.0f, glm::vec3(0.0f), false, 0});
           selectedTowerBuild = -1;
         }
       } else if (selectedTowerBuild == -1 && t.hasTower) {
@@ -251,8 +277,7 @@ int main() {
     mouseLeftPrev = mouseLeftDown;
 
     static bool mouseRightPrev = false;
-    bool mouseRightDown =
-        glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+    bool mouseRightDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
     if (mouseRightDown && !mouseRightPrev) {
       selectedTowerBuild = -1;
       selectedPlacedTowerIndex = -1;
@@ -273,15 +298,12 @@ int main() {
             e.id = nextEnemyId++;
             e.pathIndex = 0;
             e.progress = 0.0f;
-            e.currentPos =
-                glm::vec3(levelMap.path[0].x, 0.4f, levelMap.path[0].y);
+            e.currentPos = glm::vec3(levelMap.path[0].x, 0.4f, levelMap.path[0].y);
 
             // Scale HP per wave
-            e.maxHp = cfg.initialEnemyHP *
-                      std::pow(cfg.enemyHPMultiplierPerWave, currentWave - 1);
+            e.maxHp = cfg.initialEnemyHP * std::pow(cfg.enemyHPMultiplierPerWave, currentWave - 1);
             e.hp = e.maxHp;
-            e.reward = cfg.initialEnemyReward +
-                       (currentWave - 1) * cfg.rewardIncreasePerWave;
+            e.reward = cfg.initialEnemyReward + (currentWave - 1) * cfg.rewardIncreasePerWave;
 
             enemies.push_back(e);
             enemiesSpawnedInWave++;
@@ -303,22 +325,16 @@ int main() {
         }
       }
 
-      // --------------------------------
       // Tower firing logic
-      // --------------------------------
       for (Tower &tow : placedTowers) {
         tow.cooldownTimer -= deltaTime;
 
         if (tow.type == 0) { // Basic Tower
           if (tow.cooldownTimer <= 0.0f) {
-            float actualRange = cfg.towerBasicRange *
-                                (1.0f + levelMap.grid[tow.x][tow.z].height *
-                                            cfg.heightRangeMultiplier);
+            float actualRange = cfg.towerBasicRange * (1.0f + levelMap.grid[tow.x][tow.z].height * cfg.heightRangeMultiplier);
             float closestDistSq = actualRange * actualRange;
             int targetId = -1;
-            glm::vec3 towerPos(tow.x * 1.0f,
-                               levelMap.grid[tow.x][tow.z].height + 1.2f,
-                               tow.z * 1.0f);
+            glm::vec3 towerPos(tow.x * 1.0f, levelMap.grid[tow.x][tow.z].height + 1.2f, tow.z * 1.0f);
 
             for (const Enemy &e : enemies) {
               float dx = towerPos.x - e.currentPos.x;
@@ -336,20 +352,15 @@ int main() {
               Projectile p;
               p.pos = towerPos;
               p.targetId = targetId;
-              p.damage =
-                  cfg.towerBasicDamage * (1.0f + tow.upgradeLevel * 1.0f);
+              p.damage = cfg.towerBasicDamage * (2.0f * tow.upgradeLevel * 1.0f);
               p.color = glm::vec3(0.1f, 1.0f, 0.9f);
               projectiles.push_back(p);
               tow.cooldownTimer = cfg.towerBasicCooldown;
             }
           }
         } else if (tow.type == 1) { // Laser Tower
-          float actualRange =
-              cfg.towerLaserRange * (1.0f + levelMap.grid[tow.x][tow.z].height *
-                                                cfg.heightRangeMultiplier);
-          glm::vec3 towerPos(tow.x * 1.0f,
-                             levelMap.grid[tow.x][tow.z].height + 1.2f,
-                             tow.z * 1.0f);
+          float actualRange = cfg.towerLaserRange * (1.0f + levelMap.grid[tow.x][tow.z].height * cfg.heightRangeMultiplier);
+          glm::vec3 towerPos(tow.x * 1.0f, levelMap.grid[tow.x][tow.z].height + 1.2f, tow.z * 1.0f);
 
           tow.isFiringLaser = false;
 
@@ -364,8 +375,7 @@ int main() {
             }
           }
 
-          if (!target ||
-              glm::distance(towerPos, target->currentPos) > actualRange) {
+          if (!target || glm::distance(towerPos, target->currentPos) > actualRange) {
             tow.lockedTargetId = -1;
             tow.lockTime = 0.0f;
             target = nullptr;
@@ -382,8 +392,7 @@ int main() {
           }
 
           if (target) {
-            glm::vec3 targetPos =
-                target->currentPos + glm::vec3(0.0f, 0.4f, 0.0f);
+            glm::vec3 targetPos = target->currentPos + glm::vec3(0.0f, 0.4f, 0.0f);
             float dist = glm::distance(towerPos, targetPos);
             glm::vec3 dir = glm::normalize(targetPos - towerPos);
 
@@ -410,23 +419,15 @@ int main() {
               tow.isFiringLaser = true;
               tow.lockTime += deltaTime;
 
-              float damageScale =
-                  1.0f + (tow.lockTime / cfg.towerLaserChargeTime) *
-                             (cfg.towerLaserDamageMaxMultiplier - 1.0f);
-              damageScale =
-                  std::min(damageScale, cfg.towerLaserDamageMaxMultiplier);
+              float damageScale = 1.0f + (tow.lockTime / cfg.towerLaserChargeTime) * (cfg.towerLaserDamageMaxMultiplier - 1.0f);
+              damageScale = std::min(damageScale, cfg.towerLaserDamageMaxMultiplier);
 
-              target->hp -= cfg.towerLaserDamageBase * damageScale *
-                            (1.0f + tow.upgradeLevel * 1.0f) * deltaTime;
+              target->hp -= cfg.towerLaserDamageBase * damageScale * (1.0f + tow.upgradeLevel * 1.0f) * deltaTime;
             }
           }
         } else if (tow.type == 2) { // Mortar Tower
-          float actualRange = cfg.towerMortarRange *
-                              (1.0f + levelMap.grid[tow.x][tow.z].height *
-                                          cfg.heightRangeMultiplier);
-          glm::vec3 towerPos(tow.x * 1.0f,
-                             levelMap.grid[tow.x][tow.z].height + 1.2f,
-                             tow.z * 1.0f);
+          float actualRange = cfg.towerMortarRange * (1.0f + levelMap.grid[tow.x][tow.z].height * cfg.heightRangeMultiplier);
+          glm::vec3 towerPos(tow.x * 1.0f, levelMap.grid[tow.x][tow.z].height + 1.2f, tow.z * 1.0f);
 
           if (tow.cooldownTimer <= 0.0f) {
             float closestDistSq = actualRange * actualRange;
@@ -449,44 +450,33 @@ int main() {
               glm::vec2 targetXZ(target->currentPos.x, target->currentPos.z);
               float initialDistXZ = glm::distance(startXZ, targetXZ);
 
-              float estimatedFlightTime =
-                  initialDistXZ / cfg.mortarHorizontalSpeed;
-              float futureProgress =
-                  target->progress + cfg.enemySpeed * estimatedFlightTime;
+              float estimatedFlightTime = initialDistXZ / cfg.mortarHorizontalSpeed;
+              float futureProgress = target->progress + cfg.enemySpeed * estimatedFlightTime;
               int futurePathIndex = target->pathIndex;
-              while (futureProgress >= 1.0f &&
-                     futurePathIndex < (int)levelMap.path.size() - 2) {
+              while (futureProgress >= 1.0f && futurePathIndex < (int)levelMap.path.size() - 2) {
                 futureProgress -= 1.0f;
                 futurePathIndex++;
               }
 
-              glm::vec2 p1 = glm::vec2((float)levelMap.path[futurePathIndex].x,
-                                       (float)levelMap.path[futurePathIndex].y);
-              glm::vec2 p2 =
-                  glm::vec2((float)levelMap.path[futurePathIndex + 1].x,
-                            (float)levelMap.path[futurePathIndex + 1].y);
+              glm::vec2 p1 = glm::vec2((float)levelMap.path[futurePathIndex].x, (float)levelMap.path[futurePathIndex].y);
+              glm::vec2 p2 = glm::vec2((float)levelMap.path[futurePathIndex + 1].x, (float)levelMap.path[futurePathIndex + 1].y);
               glm::vec2 predictedXZ = glm::mix(p1, p2, futureProgress);
-              glm::vec3 predictedPos =
-                  glm::vec3(predictedXZ.x, target->currentPos.y, predictedXZ.y);
+              glm::vec3 predictedPos = glm::vec3(predictedXZ.x, target->currentPos.y, predictedXZ.y);
 
               float finalDistXZ = glm::distance(startXZ, predictedXZ);
 
               if (finalDistXZ > 0.1f) {
                 float flightTime = finalDistXZ / cfg.mortarHorizontalSpeed;
                 float heightDiff = predictedPos.y - towerPos.y;
-                float v0y = (heightDiff + 0.5f * cfg.mortarGravity *
-                                              flightTime * flightTime) /
-                            flightTime;
-                glm::vec2 dirXZ = glm::normalize(predictedXZ - startXZ) *
-                                  cfg.mortarHorizontalSpeed;
+                float v0y = (heightDiff + 0.5f * cfg.mortarGravity * flightTime * flightTime) / flightTime;
+                glm::vec2 dirXZ = glm::normalize(predictedXZ - startXZ) * cfg.mortarHorizontalSpeed;
 
                 Projectile p;
                 p.type = 1;
                 p.pos = towerPos;
                 p.velocity = glm::vec3(dirXZ.x, v0y, dirXZ.y);
                 p.targetId = -1;
-                p.damage =
-                    cfg.towerMortarDamage * (1.0f + tow.upgradeLevel * 1.0f);
+                p.damage = cfg.towerMortarDamage * (1.0f + tow.upgradeLevel * 1.0f);
                 p.color = glm::vec3(1.0f, 0.5f, 0.0f);
                 projectiles.push_back(p);
 
@@ -590,9 +580,7 @@ int main() {
         if (e.hp <= 0.0f) {
           materials += e.reward;
           score += e.reward * 10;
-          spawnExplosion(e.currentPos + glm::vec3(0.0f, 0.4f, 0.0f),
-                         cfg.colorExplosionEnemy, cfg.explosionDurationEnemy,
-                         1.0f, particles, flashes);
+          spawnExplosion(e.currentPos + glm::vec3(0.0f, 0.4f, 0.0f), cfg.colorExplosionEnemy, cfg.explosionDurationEnemy, 1.0f, particles, flashes);
           enemies.erase(enemies.begin() + i);
           i--;
           continue;
@@ -621,10 +609,8 @@ int main() {
         }
 
         // Path interpolation
-        glm::vec2 p1 = glm::vec2((float)levelMap.path[e.pathIndex].x,
-                                 (float)levelMap.path[e.pathIndex].y);
-        glm::vec2 p2 = glm::vec2((float)levelMap.path[e.pathIndex + 1].x,
-                                 (float)levelMap.path[e.pathIndex + 1].y);
+        glm::vec2 p1 = glm::vec2((float)levelMap.path[e.pathIndex].x, (float)levelMap.path[e.pathIndex].y);
+        glm::vec2 p2 = glm::vec2((float)levelMap.path[e.pathIndex + 1].x, (float)levelMap.path[e.pathIndex + 1].y);
 
         glm::vec2 current2D = glm::mix(p1, p2, e.progress);
         e.currentPos = glm::vec3(current2D.x, 0.6f, current2D.y);
@@ -647,7 +633,6 @@ int main() {
           i--;
         }
       }
-
     } // end game logic
 
     glClearColor(0.02f, 0.05f, 0.10f, 1.0f);
@@ -655,9 +640,9 @@ int main() {
 
     basicShader.use();
     basicShader.setFloat("objectAlpha", 1.0f);
+    basicShader.setInt("useTexture", 0); // Default: no texture
 
-    glm::mat4 projection =
-        glm::perspective(glm::radians(camera.Zoom), aspect, 0.1f, 100.0f);
+    glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), aspect, 0.1f, 100.0f);
     basicShader.setMat4("projection", projection);
     glm::mat4 view = camera.GetViewMatrix();
     basicShader.setMat4("view", view);
@@ -679,21 +664,17 @@ int main() {
     }
     for (const Tower &tow : placedTowers) {
       if (tow.type == 1 && tow.isFiringLaser) {
-        float chargeRatio =
-            std::clamp(tow.lockTime / cfg.towerLaserChargeTime, 0.0f, 1.0f);
+        float chargeRatio = std::clamp(tow.lockTime / cfg.towerLaserChargeTime, 0.0f, 1.0f);
         glm::vec3 baseColor = glm::vec3(0.0f, 1.0f, 1.0f);
         glm::vec3 maxColor = glm::vec3(1.0f, 1.0f, 1.0f);
         glm::vec3 finalColor = glm::mix(baseColor, maxColor, chargeRatio);
 
         // Offset light slightly toward tower to avoid terrain clipping
-        glm::vec3 towerEye(tow.x * 1.0f,
-                           levelMap.grid[tow.x][tow.z].height + 1.2f,
-                           tow.z * 1.0f);
+        glm::vec3 towerEye(tow.x * 1.0f,levelMap.grid[tow.x][tow.z].height + 1.2f, tow.z * 1.0f);
         glm::vec3 dirToTower = glm::normalize(towerEye - tow.laserHitPos);
         glm::vec3 lightPos = tow.laserHitPos + dirToTower * 0.1f;
 
-        allLights.push_back(
-            {lightPos, finalColor * cfg.pointLightBrightnessMultiplier});
+        allLights.push_back({lightPos, finalColor * cfg.pointLightBrightnessMultiplier});
       }
     }
     for (const FlashLight &f : flashes) {
@@ -721,8 +702,7 @@ int main() {
 
         glm::mat4 model = glm::mat4(1.0f);
 
-        model = glm::translate(model,
-                               glm::vec3(x * 1.0f, t.height / 2.0f, z * 1.0f));
+        model = glm::translate(model, glm::vec3(x * 1.0f, t.height / 2.0f, z * 1.0f));
         model = glm::scale(model, glm::vec3(0.95f, t.height, 0.95f));
 
         basicShader.setMat4("model", model);
@@ -736,8 +716,7 @@ int main() {
           objColor = cfg.colorPath;
         else {
           float hRatio = std::clamp(t.height / 5.0f, 0.0f, 1.0f);
-          objColor =
-              glm::mix(cfg.colorTerrainLow, cfg.colorTerrainHigh, hRatio);
+          objColor = glm::mix(cfg.colorTerrainLow, cfg.colorTerrainHigh, hRatio);
         }
 
         basicShader.setVec3("objectColor", objColor);
@@ -757,12 +736,15 @@ int main() {
       glDrawArrays(GL_TRIANGLES, 0, 36);
     }
 
-    // Render towers
+    // Render towers with brick texture
+    basicShader.setInt("useTexture", 1);
+    basicShader.setInt("brickTexture", 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, brickTexture);
     for (const Tower &tow : placedTowers) {
       Tile &t = levelMap.grid[tow.x][tow.z];
       glm::mat4 model = glm::mat4(1.0f);
-      model = glm::translate(model,
-                             glm::vec3(tow.x * 1.0f, t.height, tow.z * 1.0f));
+      model = glm::translate(model, glm::vec3(tow.x * 1.0f, t.height, tow.z * 1.0f));
       model = glm::scale(model, glm::vec3(0.6f, 1.2f, 0.6f));
       basicShader.setMat4("model", model);
 
@@ -775,6 +757,8 @@ int main() {
       glBindVertexArray(towerVAO[tow.type]);
       glDrawArrays(GL_TRIANGLES, 0, towerVertexCount[tow.type]);
     }
+    basicShader.setInt("useTexture", 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
 
     // Render projectiles
     glBindVertexArray(VAO);
@@ -796,14 +780,11 @@ int main() {
     glBindVertexArray(towerVAO[2]);
     for (const Tower &tow : placedTowers) {
       if (tow.type == 1 && tow.isFiringLaser) {
-        glm::vec3 towerEye(tow.x * 1.0f,
-                           levelMap.grid[tow.x][tow.z].height + 1.2f,
-                           tow.z * 1.0f);
+        glm::vec3 towerEye(tow.x * 1.0f, levelMap.grid[tow.x][tow.z].height + 1.2f, tow.z * 1.0f);
         float dist = glm::distance(towerEye, tow.laserHitPos);
 
         if (dist > 0.01f) {
-          float chargeRatio =
-              std::clamp(tow.lockTime / cfg.towerLaserChargeTime, 0.0f, 1.0f);
+          float chargeRatio = std::clamp(tow.lockTime / cfg.towerLaserChargeTime, 0.0f, 1.0f);
           float thickness = 0.02f + 0.08f * chargeRatio;
 
           glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -812,10 +793,8 @@ int main() {
             up = glm::vec3(1.0f, 0.0f, 0.0f);
           }
 
-          glm::mat4 model =
-              glm::inverse(glm::lookAt(towerEye, tow.laserHitPos, up));
-          model = glm::rotate(model, glm::radians(-90.0f),
-                              glm::vec3(1.0f, 0.0f, 0.0f));
+          glm::mat4 model = glm::inverse(glm::lookAt(towerEye, tow.laserHitPos, up));
+          model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
           model = glm::scale(model, glm::vec3(thickness, dist, thickness));
 
           basicShader.setMat4("model", model);
@@ -862,12 +841,11 @@ int main() {
     glDisable(GL_BLEND);
     basicShader.setFloat("objectAlpha", 1.0f);
 
-    // Render tower ghost during placement
+    // Render tower ghost during placement (with brick texture)
     if (selectedTowerBuild != -1 && hoverValid) {
       Tile &t = levelMap.grid[hoverX][hoverZ];
       glm::mat4 model = glm::mat4(1.0f);
-      model = glm::translate(model,
-                             glm::vec3(hoverX * 1.0f, t.height, hoverZ * 1.0f));
+      model = glm::translate(model, glm::vec3(hoverX * 1.0f, t.height, hoverZ * 1.0f));
       model = glm::scale(model, glm::vec3(0.6f, 1.2f, 0.6f));
       basicShader.setMat4("model", model);
 
@@ -881,6 +859,12 @@ int main() {
       basicShader.setVec3("objectColor", tColor);
       basicShader.setFloat("objectAlpha", 0.5f);
 
+      // Brick texture on ghost tower too
+      basicShader.setInt("useTexture", 1);
+      basicShader.setInt("brickTexture", 0);
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, brickTexture);
+
       glEnable(GL_BLEND);
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -889,6 +873,8 @@ int main() {
 
       glDisable(GL_BLEND);
       basicShader.setFloat("objectAlpha", 1.0f);
+      basicShader.setInt("useTexture", 0);
+      glBindTexture(GL_TEXTURE_2D, 0);
     }
 
     bool drawRange = false;
@@ -972,13 +958,11 @@ int main() {
 
       glBindVertexArray(rangeVAO);
       glBindBuffer(GL_ARRAY_BUFFER, rangeVBO);
-      glBufferSubData(GL_ARRAY_BUFFER, 0, rangePoints.size() * sizeof(float),
-                      rangePoints.data());
+      glBufferSubData(GL_ARRAY_BUFFER, 0, rangePoints.size() * sizeof(float), rangePoints.data());
 
       glm::mat4 idModel = glm::mat4(1.0f);
       basicShader.setMat4("model", idModel);
-      basicShader.setVec3("objectColor",
-                          glm::vec3(0.1f, 1.0f, 0.3f)); // Emissive Green Line
+      basicShader.setVec3("objectColor", glm::vec3(0.1f, 1.0f, 0.3f)); // Emissive Green Line
 
       glLineWidth(3.0f);
       glDrawArrays(GL_LINE_LOOP, 0, segments);
@@ -999,6 +983,7 @@ int main() {
   ImGui_ImplGlfw_Shutdown();
   ImGui::DestroyContext();
 
+  glDeleteTextures(1, &brickTexture);
   glDeleteVertexArrays(1, &VAO);
   glDeleteBuffers(1, &VBO);
   glfwTerminate();

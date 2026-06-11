@@ -3,24 +3,24 @@ out vec4 FragColor;
 
 in vec3 FragPos;
 in vec3 Normal;
+in vec2 TexCoord;
 
 // Kolor obiektu ustawiany per-blok z C++
 uniform vec3 objectColor;
-// Pozycja kamery (do obliczeń odbicia lustrzanego)
 uniform vec3 viewPos;
 
-// ========================
-// Światło Kierunkowe (Słońce)
-// ========================
+// Toggle: 1 = sample brickTexture and multiply with objectColor, 0 = use objectColor only
+uniform int useTexture;
+uniform sampler2D brickTexture;
+
+// Światło Kierunkowe
 struct DirLight {
     vec3 direction;
     vec3 color;
 };
 uniform DirLight dirLight;
 
-// ========================
-// Punktowe Źródła Światła (Pociski, Lasery)
-// ========================
+// Punktowe Źródła Światła
 #define MAX_POINT_LIGHTS 32
 
 struct PointLight {
@@ -51,7 +51,7 @@ vec3 calcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec3 albedo) {
     return ambient + diffuse + specular;
 }
 
-// Obliczenie światła punktowego (pociski, trafienia lasera)
+// Obliczenie światła punktowego
 vec3 calcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 albedo) {
     vec3 lightDir = normalize(light.position - fragPos);
     
@@ -66,9 +66,7 @@ vec3 calcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, v
     vec3 diffuse  = diff * light.color * albedo;
     vec3 specular = 0.8 * spec * light.color;
 
-    // EFEKT WYPALENIA (Burn-in effect)
-    // Gdy światło jest BARDZO blisko, tworzy intensywny blask "przebijający" się przez teksturę.
-    // Dzięki temu punkt trafienia lasera wygląda na ekstremalnie gorący, niezależnie od koloru podłoża.
+    // Burn-in effect
     float burnFactor = exp(-dist * 4.0);
     vec3 burnGlow = light.color * burnFactor * 1.5;
 
@@ -80,12 +78,17 @@ void main()
     vec3 norm = normalize(Normal);
     vec3 viewDir = normalize(viewPos - FragPos);
 
-    // 1. Oświetlenie globalne
-    vec3 result = calcDirLight(dirLight, norm, viewDir, objectColor);
+    // Determine albedo: multiply texture color with objectColor when texturing is active
+    vec3 albedo = objectColor;
+    if (useTexture == 1) {
+        vec3 texColor = texture(brickTexture, TexCoord).rgb;
+        albedo = objectColor * texColor;
+    }
 
-    // 2. Światła punktowe
+    vec3 result = calcDirLight(dirLight, norm, viewDir, albedo);
+
     for (int i = 0; i < numPointLights; i++) {
-        result += calcPointLight(pointLights[i], norm, FragPos, viewDir, objectColor);
+        result += calcPointLight(pointLights[i], norm, FragPos, viewDir, albedo);
     }
 
     FragColor = vec4(result, objectAlpha);

@@ -2,7 +2,6 @@
 
 #include <glm/glm.hpp>
 
-
 struct GameConfig {
   int initialPlayerHP = 10;
   int initialMaterials = 100;
@@ -23,7 +22,7 @@ struct GameConfig {
   int towerLaserCost = 30;
   int towerMortarCost = 40;
 
-  float towerBasicDamage = 5.0f;
+  float towerBasicDamage = 4.0f;
   float towerBasicRange = 4.0f;
   float heightRangeMultiplier = 0.15f; // +15% range per height level
   float towerBasicCooldown = 1.0f;
@@ -52,7 +51,7 @@ struct GameConfig {
   glm::vec3 colorPortal = glm::vec3(0.9f, 0.2f, 0.1f);
   glm::vec3 colorBase = glm::vec3(0.1f, 0.9f, 0.2f);
   glm::vec3 colorPath = glm::vec3(0.0f, 0.8f, 0.9f);
-  glm::vec3 colorTerrainLow = glm::vec3(0.15f, 0.0f, 0.3f);
+  glm::vec3 colorTerrainLow = glm::vec3(0.1f, 0.0f, 0.3f);
   glm::vec3 colorTerrainHigh = glm::vec3(0.15f, 0.5f, 0.8f);
 
   glm::vec3 colorExplosionMortar = glm::vec3(1.0f, 0.4f, 0.0f);

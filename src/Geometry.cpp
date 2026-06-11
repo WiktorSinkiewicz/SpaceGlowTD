@@ -8,6 +8,24 @@ std::vector<float> generatePrismVertices(int sides) {
   float angleOffset = (sides == 4) ? (PI / 4.0f) : 0.0f;
   float radius = (sides == 4) ? (0.5f * sqrt(2.0f)) : 0.5f;
 
+  // Compute total perimeter for proper UV tiling
+  float perimeter = 0.0f;
+  std::vector<float> edgeLengths(sides);
+  for (int i = 0; i < sides; ++i) {
+    float a1 = i * angleStep + angleOffset;
+    float a2 = (i + 1) * angleStep + angleOffset;
+    float x1 = radius * cos(a1), z1 = radius * sin(a1);
+    float x2 = radius * cos(a2), z2 = radius * sin(a2);
+    float dx = x2 - x1, dz = z2 - z1;
+    edgeLengths[i] = sqrt(dx * dx + dz * dz);
+    perimeter += edgeLengths[i];
+  }
+
+  float uAccum = 0.0f;
+  // UV tiling: 2 repeats around the perimeter, 2 repeats vertically
+  float uScale = 2.0f;
+  float vScale = 2.0f;
+
   for (int i = 0; i < sides; ++i) {
     float a1 = i * angleStep + angleOffset;
     float a2 = (i + 1) * angleStep + angleOffset;
@@ -20,30 +38,41 @@ std::vector<float> generatePrismVertices(int sides) {
     glm::vec3 normal =
         glm::normalize(glm::vec3((x1 + x2) / 2.0f, 0.0f, (z1 + z2) / 2.0f));
 
-    // Side face (2 triangles)
+    // UV mapping for side faces — tile the brick texture
+    float u0 = (uAccum / perimeter) * uScale;
+    float u1 = ((uAccum + edgeLengths[i]) / perimeter) * uScale;
+    float vBot = 0.0f;
+    float vTop = vScale;
+    uAccum += edgeLengths[i];
+
+    // Side face (2 triangles) — vertex format: pos(3) + normal(3) + uv(2)
     vertices.insert(vertices.end(),
-                    {x1, 0.0f, z1, normal.x, normal.y, normal.z});
+                    {x1, 0.0f, z1, normal.x, normal.y, normal.z, u0, vBot});
     vertices.insert(vertices.end(),
-                    {x1, 1.0f, z1, normal.x, normal.y, normal.z});
+                    {x1, 1.0f, z1, normal.x, normal.y, normal.z, u0, vTop});
     vertices.insert(vertices.end(),
-                    {x2, 0.0f, z2, normal.x, normal.y, normal.z});
+                    {x2, 0.0f, z2, normal.x, normal.y, normal.z, u1, vBot});
 
     vertices.insert(vertices.end(),
-                    {x2, 0.0f, z2, normal.x, normal.y, normal.z});
+                    {x2, 0.0f, z2, normal.x, normal.y, normal.z, u1, vBot});
     vertices.insert(vertices.end(),
-                    {x1, 1.0f, z1, normal.x, normal.y, normal.z});
+                    {x1, 1.0f, z1, normal.x, normal.y, normal.z, u0, vTop});
     vertices.insert(vertices.end(),
-                    {x2, 1.0f, z2, normal.x, normal.y, normal.z});
+                    {x2, 1.0f, z2, normal.x, normal.y, normal.z, u1, vTop});
 
-    // Top face
-    vertices.insert(vertices.end(), {0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f});
-    vertices.insert(vertices.end(), {x2, 1.0f, z2, 0.0f, 1.0f, 0.0f});
-    vertices.insert(vertices.end(), {x1, 1.0f, z1, 0.0f, 1.0f, 0.0f});
+    // Top face — simple radial UV for cap
+    vertices.insert(vertices.end(), {0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f});
+    vertices.insert(vertices.end(), {x2, 1.0f, z2, 0.0f, 1.0f, 0.0f,
+                                     0.5f + x2, 0.5f + z2});
+    vertices.insert(vertices.end(), {x1, 1.0f, z1, 0.0f, 1.0f, 0.0f,
+                                     0.5f + x1, 0.5f + z1});
 
     // Bottom face
-    vertices.insert(vertices.end(), {0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f});
-    vertices.insert(vertices.end(), {x1, 0.0f, z1, 0.0f, -1.0f, 0.0f});
-    vertices.insert(vertices.end(), {x2, 0.0f, z2, 0.0f, -1.0f, 0.0f});
+    vertices.insert(vertices.end(), {0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.5f, 0.5f});
+    vertices.insert(vertices.end(), {x1, 0.0f, z1, 0.0f, -1.0f, 0.0f,
+                                     0.5f + x1, 0.5f + z1});
+    vertices.insert(vertices.end(), {x2, 0.0f, z2, 0.0f, -1.0f, 0.0f,
+                                     0.5f + x2, 0.5f + z2});
   }
   return vertices;
 }
